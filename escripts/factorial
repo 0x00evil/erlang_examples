@@ -1,0 +1,22 @@
+#! /usr/bin/env escript
+main([String, String1]) ->
+    io:format("String is ~p~n", [String1]),
+    try
+      N = list_to_integer(String),
+      F = fac(N),
+      io:format("factorial ~w = ~w~n", [N, F])
+    catch
+        _:_ ->
+          usage()
+    end;
+main(_) ->
+    usage().
+
+usage() ->
+  io:format("usage: factorial integer\n"),
+  halt(1).
+
+fac(0) -> 1;
+fac(N) -> N + fac(N - 1).
+
+%% 第一行必须要有，不管是用./script_name或者escript script_name的方式执行脚本，第一行都是必要的！（但是不知道为什么)
