@@ -1,0 +1,8 @@
+[{"./esson.mp3",
+  {"ID3v1",
+   [{title,<<"全世界失眠">>},{artist,<<"陈奕迅">>},{album,<<"???? (?)">>}]}},
+ {"./md.mp3",error},
+ {"./pft.mp3",
+  {"ID3v1",
+   [{title,<<"Time">>},{artist,<<"平克弗洛伊德">>},{album,<<"月之背影">>}]}},
+ {"./ymb.mp3",error}].

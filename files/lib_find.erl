@@ -5,6 +5,7 @@
 -include_lib("kernel/include/file.hrl").
 
 files(Dir, Re, Flag) ->
+    io:format("Regular expression is: ~s\n", [Dir]),
     Re1 = xmerl_regexp:sh_to_awk(Re),
     reverse(files(Dir, Re1, Flag, fun(File, Acc) -> [File|Acc] end, [])).
 
@@ -22,6 +23,7 @@ find_files([File|T], Dir, Reg, Recursive, Fun, Acc0) ->
         regular ->
             case re:run(FullName, Reg, [{capture, none}]) of
                 match ->
+                    io:format("matched !!!\n"),
                     Acc = Fun(FullName, Acc0),
                     find_files(T, Dir, Reg, Recursive, Fun, Acc);
                 nomatch ->
