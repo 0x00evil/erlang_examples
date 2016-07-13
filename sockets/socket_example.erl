@@ -1,4 +1,5 @@
 -module(socket_example).
+-export([nano_get_url/0, nano_get_url/1]).
 -compile(export_all).
 -import(lists, [reverse/1]).
 nano_get_url() ->
@@ -7,23 +8,34 @@ nano_get_url() ->
 nano_get_url(Host) ->
     {ok, Socket} = gen_tcp:connect(Host, 80, [binary, {packet, 0}]),
     ok = gen_tcp:send(Socket, "GET / HTTP/1.0\r\n\r\n"),
-    receive_data(Socket, []).
+    receive_data(Socket, [], 0). %% 统计收到多少packets
 
-receive_data(Socket, SoFar) ->
+receive_data(Socket, SoFar, PacketCounter) ->
     receive
         {tcp, Socket, Bin} ->
-            receive_data(Socket, [Bin | SoFar]);
+            io:format("~pth packets is ~p",[PacketCounter + 1, Bin]),
+            receive_data(Socket, [Bin | SoFar], PacketCounter + 1);
         {tcp_closed, Socket} ->
-            io:format("~p~n", [list_to_binary(reverse(SoFar))])
+            io:format("~p~n", [list_to_binary(reverse(SoFar))]), %% 打印出来的都是而仅是数据
+            io:format("received ~p packets ~n",[PacketCounter]),
+            io:format("received ~p packets ~n", [length(SoFar)]),
+            list_to_binary(reverse(SoFar)) %% 可以显示文字
+
     end.
 
 start_nano_server() ->
+    io:format("start listening\n"),
     {ok, Listen} = gen_tcp:listen(2345, [binary, {packet, 4},
                                          {reuseaddr, true},
                                          {active, true}]),
+    io:format("start accepting\n"),
     {ok, Socket} = gen_tcp:accept(Listen),
+    {ok, {IP, Port}} = inet:peername(Socket),
+    io:format("~p ~p~n", [IP, Port]),
+    {ok, {Address, SPort}} = inet:sockname(Socket),
+    io:format("~p ~p ~n", [Address, SPort]),
     gen_tcp:close(Listen),
-    loop(Socket).
+    loop(Socket, 0).
 
 start_seq_server() ->
     {ok, Listen} = gen_tcp:listen(2345, [binary, {packet, 4},
@@ -33,32 +45,42 @@ start_seq_server() ->
 
 seq_loop(Listen) ->
     {ok, Socket} = gen_tcp:accept(Listen),
-    loop(Socket),
+    {ok, {IP, Port}} = inet:peername(Socket),
+    io:format("~p ~p~n", [IP, Port]),
+    loop(Socket, 0),
     seq_loop(Listen).
 
 start_parallel_server() ->
+    io:format("start listening\n"),
     {ok, Listen} = gen_tcp:listen(2345, [binary, {packet, 4},
                                          {reuseaddr, true},
                                          {active, true}]),
     spawn(fun() -> par_connect(Listen) end).
 
 par_connect(Listen) ->
+    io:format("start accepting\n"),
     {ok, Socket} = gen_tcp:accept(Listen),
+    {ok, {LocalIP, LocalPort}} = inet:sockname(Socket),
+    io:format("Local address and port are ~p,~p~n", [LocalIP, LocalPort]),
+    {ok, {RemoteIP, RemotePort}} = inet:peername(Socket),
+    io:format("Remote address and port are ~p,~p~n", [RemoteIP, RemotePort]),
     spawn(fun() -> par_connect(Listen) end),
-    loop(Socket).
+    loop(Socket, 0).
 
-loop(Socket) ->
+loop(Socket, PacketCounter) ->
     receive
         {tcp, Socket, Bin} ->
             io:format("Server received binary = ~p~n", [Bin]),
             Str = binary_to_term(Bin),
             io:format("Server unpacked ~p~n", [Str]),
-            Reply = string2value(Str),
-            io:format("\n"),
+            %% Reply = string2value(Str),
+            Reply = [Str | ["fff"]],
             io:format("Server reply = ~p~n", [Reply]),
             gen_tcp:send(Socket, term_to_binary(Reply)),
-            loop(Socket);
+            io:format("\n"),
+            loop(Socket, PacketCounter + 1);
         {tcp_closed, Socket} ->
+            io:format("server received ~p packets~n", [PacketCounter]),
             io:format("Server socket closed~n")
     end.
 
